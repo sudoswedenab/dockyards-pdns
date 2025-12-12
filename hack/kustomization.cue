@@ -8,7 +8,6 @@ _tag:  string @tag(tag)
 apiVersion: "kustomize.config.k8s.io/v1beta1"
 kind:       "Kustomization"
 resources: [
-	"crd",
 	"base",
 	"rbac",
 ]
