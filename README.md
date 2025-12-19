@@ -6,7 +6,7 @@ This repository supplies a small Kubernetes controller that keeps Dockyards clus
 
 - **`DockyardsClusterReconciler`** (controllers/dockyardscluster_controller.go) watches `dockyards.io` clusters. When a cluster is owned by an organization and not being deleted it ensures a PowerDNS `Zone` exists with the right labels, ownership, and nameserver records.
 - **`ZoneReconciler`** (controllers/zone_controller.go) watches the PowerDNS `Zone` resource. Once a zone enters a succeeded state it create/patches the SOA/NS RRsets, discovers PowerDNS API and DNS endpoints, and configures a Dockyards `Workload` that runs ExternalDNS pointing at PowerDNS.
-- **`Configuration`** is driven by the Dockyards config reader; keys such as `managementDomain`, `pdnsName`, `pdnsNamespace`, and `dockyardsPublicNamespace` tell the controller how to wire everything together.
+- **`Configuration`** is driven by the Dockyards config reader; keys such as `managementDomain`, `pdnsName`, `pdnsNamespace`, and `publicNamespace` tell the controller how to wire everything together (the `pdnsName` base also names the PowerDNS secret that holds `PDNS_API_KEY`).
 
 ## Requirements
 
@@ -30,7 +30,7 @@ go test ./...
 
 1. Build/push the controller image as needed.
 2. Deploy the controller into a cluster that has the Dockyards CRDs and PowerDNS operator installed.
-3. Set the required config keys via the Dockyards config API so `managementDomain`, `pdnsName`, `pdnsNamespace`, and `dockyardsPublicNamespace` reflect your environment.
+3. Set the required config keys via the Dockyards config API so `managementDomain`, `pdnsName`, `pdnsNamespace`, and `publicNamespace` reflect your environment.
 
 ## Troubleshooting
 

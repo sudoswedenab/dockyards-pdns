@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 
 	pdns "github.com/powerdns-operator/powerdns-operator/api/v1alpha2"
 	"github.com/sudoswedenab/dockyards-backend/api/apiutil"
@@ -33,13 +34,10 @@ import (
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups=dns.cav.enablers.ob,resources=zones,verbs=create;get;list;watch;patch
 
-// TODO: consider making this configurable through DY Config
-const zoneTTL = 300
-
 // DockyardsClusterReconciler orchestrates PowerDNS zones for Dockyards clusters.
 type DockyardsClusterReconciler struct {
 	client.Client
-	dyconfig.DockyardsConfigReader
+	*dyconfig.ConfigManager
 }
 
 // Reconcile ensures a DNS zone exists for an owned cluster that is not being deleted.
@@ -74,7 +72,12 @@ func (r *DockyardsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 func (r *DockyardsClusterReconciler) reconcileDNSZone(ctx context.Context, cluster *dockyardsv1.Cluster) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
 
-	zoneName := string(cluster.GetUID()) + "." + r.GetConfigKey("managementDomain", "")
+	managementDomain := r.GetValueOrDefault(KeyManagementDomain, "")
+	if managementDomain == "" {
+		return ctrl.Result{}, errors.New("no value for config key " + string(KeyManagementDomain))
+	}
+
+	zoneName := string(cluster.GetUID()) + "." + managementDomain
 
 	zone := pdns.Zone{
 		ObjectMeta: metav1.ObjectMeta{
