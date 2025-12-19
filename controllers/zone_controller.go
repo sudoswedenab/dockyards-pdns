@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -33,32 +34,10 @@ import (
 	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const (
-	pdnsNameKey      = "pdnsName"
-	pdnsNamespaceKey = "pdnsNamespace"
-)
-
-const (
-	soaRefreshInterval = 10800
-	soaRetryInterval   = 3600
-	soaExpireTime      = 604800
-	soaNegativeCache   = 3600
-)
-
 // ZoneReconciler ensures PowerDNS zones are fully configured and mirrored to Dockyards resources.
 type ZoneReconciler struct {
 	client.Client
-	dyconfig.DockyardsConfigReader
-}
-
-// PDNSIPs holds DNS and API addresses used to configure Dockyards workloads.
-type PDNSIPs struct {
-	// DNSIP is a string containing an ExternalIP associated with PowerDNS's LoadBalancer service
-	// intented for DNS-specific traffic
-	DNSIP string
-	// APIIPs is a slice of strings containing all ClusterIPs associated with PowerDNS's ClusterIP service
-	// intented for API-specific traffic
-	APIIPs []string
+	*dyconfig.ConfigManager
 }
 
 // +kubebuilder:rbac:groups=dockyards.io,resources=clusters/status,verbs=patch
@@ -220,11 +199,20 @@ func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdns.Zone, e
 // reconcileExternalDNS configures a Dockyards Workload that runs ExternalDNS against PowerDNS.
 func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdns.Zone, cluster *dockyardsv1.Cluster, internalIPs []string) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
+	pdnsName := r.GetValueOrDefault(KeyPDNSName, "")
+	if pdnsName == "" {
+		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", KeyPDNSName)
+	}
+
+	pdnsNamespace := r.GetValueOrDefault(KeyPDNSNamespace, "")
+	if pdnsNamespace == "" {
+		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", KeyPDNSNamespace)
+	}
 
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.GetConfigKey(pdnsNameKey, "powerdns"),
-			Namespace: r.GetConfigKey(pdnsNamespaceKey, "pdns"),
+			Name:      pdnsName,
+			Namespace: pdnsNamespace,
 		},
 	}
 	err := r.Get(ctx, client.ObjectKeyFromObject(&secret), &secret)
@@ -232,7 +220,10 @@ func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdns.Zo
 		return ctrl.Result{}, err
 	}
 
-	publicNamespace := r.GetConfigKey("dockyardsPublicNamespace", "dockyards-public")
+	publicNamespace := r.GetValueOrDefault(dyconfig.KeyPublicNamespace, "")
+	if publicNamespace == "" {
+		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", dyconfig.KeyPublicNamespace)
+	}
 
 	workload := dockyardsv1.Workload{
 		ObjectMeta: metav1.ObjectMeta{
@@ -308,8 +299,15 @@ func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdns.Zo
 
 // getPDNSIPs fetches the DNS and API service addresses exported by PowerDNS components.
 func (r *ZoneReconciler) getPDNSIPs(ctx context.Context) (*PDNSIPs, error) {
-	pdnsName := r.GetConfigKey(pdnsNameKey, "powerdns")
-	pdnsNamespace := r.GetConfigKey(pdnsNamespaceKey, "pdns")
+	pdnsName := r.GetValueOrDefault(KeyPDNSName, "")
+	if pdnsName == "" {
+		return nil, fmt.Errorf("no value for config key `%s`", KeyPDNSName)
+	}
+
+	pdnsNamespace := r.GetValueOrDefault(KeyPDNSNamespace, "")
+	if pdnsNamespace == "" {
+		return nil, fmt.Errorf("no value for config key `%s`", KeyPDNSNamespace)
+	}
 
 	pdnsDNSService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

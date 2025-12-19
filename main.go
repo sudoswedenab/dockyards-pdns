@@ -32,8 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-const managementDomainKey = "managementDomain"
-
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;patch;watch
 
 func main() {
@@ -69,30 +67,19 @@ func main() {
 
 	_ = corev1.AddToScheme(scheme)
 
-	controllerClient, err := client.New(cfg, client.Options{Scheme: scheme})
-	if err != nil {
-		logger.Error("error creating new controller client", "err", err)
-
-		os.Exit(1)
+	configManagerOptions := []dyconfig.ConfigManagerOption{
+		dyconfig.WithLogger(logger),
 	}
-
-	dockyardsConfig, err := dyconfig.GetConfig(ctx, controllerClient, configMap, dockyardsNamespace)
+	dockyardsConfig, err := dyconfig.NewConfigManager(m, client.ObjectKey{Namespace: dockyardsNamespace, Name: configMap}, configManagerOptions...)
 	if err != nil {
-		logger.Error("error getting dockyards config", "err", err)
-
-		os.Exit(1)
-	}
-
-	md := dockyardsConfig.GetConfigKey(managementDomainKey, "")
-	if md == "" {
-		logger.Error("no " + managementDomainKey + " specified in dockyards config")
+		logger.Error("could not create config manager", "err", err)
 
 		os.Exit(1)
 	}
 
 	err = (&controllers.DockyardsClusterReconciler{
-		Client:                m.GetClient(),
-		DockyardsConfigReader: dockyardsConfig,
+		Client:        m.GetClient(),
+		ConfigManager: dockyardsConfig,
 	}).SetupWithManager(m)
 	if err != nil {
 		logger.Error("error creating new dockyards cluster reconciler", "err", err)
@@ -101,8 +88,8 @@ func main() {
 	}
 
 	err = (&controllers.ZoneReconciler{
-		Client:                m.GetClient(),
-		DockyardsConfigReader: dockyardsConfig,
+		Client:        m.GetClient(),
+		ConfigManager: dockyardsConfig,
 	}).SetupWithManager(m)
 	if err != nil {
 		logger.Error("error creating new zone reconciler", "err", err)

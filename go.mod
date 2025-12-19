@@ -11,7 +11,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/powerdns-operator/powerdns-operator v0.6.0
 	github.com/spf13/pflag v1.0.10
-	github.com/sudoswedenab/dockyards-backend/api v0.0.0-20251201104939-9f7cc93ef8f7
+	github.com/sudoswedenab/dockyards-backend/api v0.0.0-20251218125700-92efbde086c5
 	k8s.io/api v0.34.1
 	k8s.io/apiextensions-apiserver v0.34.1
 	k8s.io/apimachinery v0.34.1
