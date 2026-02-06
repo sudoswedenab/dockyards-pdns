@@ -18,7 +18,7 @@ import (
 	"context"
 	"errors"
 
-	pdns "github.com/powerdns-operator/powerdns-operator/api/v1alpha2"
+	pdnsv1 "github.com/powerdns-operator/powerdns-operator/api/v1alpha2"
 	"github.com/sudoswedenab/dockyards-backend/api/apiutil"
 	dyconfig "github.com/sudoswedenab/dockyards-backend/api/config"
 	dockyardsv1 "github.com/sudoswedenab/dockyards-backend/api/v1alpha3"
@@ -79,7 +79,7 @@ func (r *DockyardsClusterReconciler) reconcileDNSZone(ctx context.Context, clust
 
 	zoneName := string(cluster.GetUID()) + "." + managementDomain
 
-	zone := pdns.Zone{
+	zone := pdnsv1.Zone{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      zoneName,
 			Namespace: cluster.Namespace,
@@ -99,7 +99,7 @@ func (r *DockyardsClusterReconciler) reconcileDNSZone(ctx context.Context, clust
 			},
 		}
 
-		zone.Spec = pdns.ZoneSpec{
+		zone.Spec = pdnsv1.ZoneSpec{
 			Kind: "Native",
 			Nameservers: []string{
 				"ns1." + zoneName,
@@ -122,11 +122,11 @@ func (r *DockyardsClusterReconciler) SetupWithManager(manager ctrl.Manager) erro
 	scheme := manager.GetScheme()
 
 	_ = dockyardsv1.AddToScheme(scheme)
-	_ = pdns.AddToScheme(scheme)
+	_ = pdnsv1.AddToScheme(scheme)
 
 	err := ctrl.NewControllerManagedBy(manager).
 		For(&dockyardsv1.Cluster{}).
-		Owns(&pdns.Zone{}).
+		Owns(&pdnsv1.Zone{}).
 		Complete(r)
 	if err != nil {
 		return err

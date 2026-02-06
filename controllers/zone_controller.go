@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	pdns "github.com/powerdns-operator/powerdns-operator/api/v1alpha2"
+	pdnsv1 "github.com/powerdns-operator/powerdns-operator/api/v1alpha2"
 	dyconfig "github.com/sudoswedenab/dockyards-backend/api/config"
 	dockyardsv1 "github.com/sudoswedenab/dockyards-backend/api/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +48,7 @@ type ZoneReconciler struct {
 // Reconcile synchronizes RRsets and external DNS workloads once PowerDNS zones succeed.
 func (r *ZoneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
-	var zone pdns.Zone
+	var zone pdnsv1.Zone
 
 	err := r.Get(ctx, req.NamespacedName, &zone)
 	if client.IgnoreNotFound(err) != nil {
@@ -102,7 +102,7 @@ func (r *ZoneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 }
 
 // reconcileRRsets ensures SOA and NS records exist for the supplied zone and IP.
-func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdns.Zone, externalIP string) (ctrl.Result, error) {
+func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdnsv1.Zone, externalIP string) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
 
 	nsString := "ns1." + zone.Name + "."
@@ -119,7 +119,7 @@ func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdns.Zone, e
 		strconv.Itoa(soaNegativeCache),
 	}
 
-	soaset := pdns.RRset{
+	soaset := pdnsv1.RRset{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "soa." + zone.Name,
 			Namespace: zone.Namespace,
@@ -129,20 +129,20 @@ func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdns.Zone, e
 	operationResult, err := controllerutil.CreateOrPatch(ctx, r.Client, &soaset, func() error {
 		soaset.OwnerReferences = []metav1.OwnerReference{
 			{
-				APIVersion: pdns.GroupVersion.String(),
+				APIVersion: pdnsv1.GroupVersion.String(),
 				Kind:       "Zone", // PDNS library does not offer ZoneKind
 				Name:       zone.Name,
 				UID:        zone.UID,
 			},
 		}
-		soaset.Spec = pdns.RRsetSpec{
+		soaset.Spec = pdnsv1.RRsetSpec{
 			Type: "SOA",
 			TTL:  uint32(3600),
 			Name: zone.Name + ".",
 			Records: []string{
 				strings.Join(record, " "),
 			},
-			ZoneRef: pdns.ZoneRef{
+			ZoneRef: pdnsv1.ZoneRef{
 				Name: zone.Name,
 				Kind: zone.Kind,
 			},
@@ -156,7 +156,7 @@ func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdns.Zone, e
 
 	logger.Info("Reconciled Zone SOA RRSet", "zone", zone.Name, "operationResult", operationResult)
 
-	rrset := pdns.RRset{
+	rrset := pdnsv1.RRset{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "ns1." + zone.Name,
 			Namespace: zone.Namespace,
@@ -166,20 +166,20 @@ func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdns.Zone, e
 	operationResult, err = controllerutil.CreateOrPatch(ctx, r.Client, &rrset, func() error {
 		rrset.OwnerReferences = []metav1.OwnerReference{
 			{
-				APIVersion: pdns.GroupVersion.String(),
+				APIVersion: pdnsv1.GroupVersion.String(),
 				Kind:       "Zone", // PDNS library does not offer ZoneKind
 				Name:       zone.Name,
 				UID:        zone.UID,
 			},
 		}
-		rrset.Spec = pdns.RRsetSpec{
+		rrset.Spec = pdnsv1.RRsetSpec{
 			Type: "A",
 			TTL:  uint32(zoneTTL),
 			Name: "ns1",
 			Records: []string{
 				externalIP,
 			},
-			ZoneRef: pdns.ZoneRef{
+			ZoneRef: pdnsv1.ZoneRef{
 				Name: zone.Name,
 				Kind: zone.Kind,
 			},
@@ -197,7 +197,7 @@ func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdns.Zone, e
 }
 
 // reconcileExternalDNS configures a Dockyards Workload that runs ExternalDNS against PowerDNS.
-func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdns.Zone, cluster *dockyardsv1.Cluster, internalIPs []string) (ctrl.Result, error) {
+func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdnsv1.Zone, cluster *dockyardsv1.Cluster, internalIPs []string) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
 	pdnsName := r.GetValueOrDefault(KeyPDNSName, "")
 	if pdnsName == "" {
@@ -252,17 +252,17 @@ func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdns.Zo
 
 		workload.Spec.Provenience = dockyardsv1.ProvenienceDockyards
 		workload.Spec.ClusterComponent = true
-		workload.Spec.TargetNamespace = "external-dns"
+		workload.Spec.TargetNamespace = workloadTargetNamespace
 
 		workload.Spec.WorkloadTemplateRef = &corev1.TypedObjectReference{
 			Kind:      dockyardsv1.WorkloadTemplateKind,
-			Name:      "external-dns",
+			Name:      workloadTargetNamespace,
 			Namespace: &publicNamespace,
 		}
 
-		apiKey, ok := secret.Data["PDNS_API_KEY"]
+		apiKey, ok := secret.Data[secretPDNSAPIKey]
 		if !ok || len(apiKey) == 0 {
-			return errors.New("PDNS_API_KEY missing from secret")
+			return fmt.Errorf("%s missing from secret", secretPDNSAPIKey)
 		}
 
 		raw, err := json.Marshal(map[string]any{
@@ -341,10 +341,10 @@ func (r *ZoneReconciler) SetupWithManager(manager ctrl.Manager) error {
 	scheme := manager.GetScheme()
 
 	_ = dockyardsv1.AddToScheme(scheme)
-	_ = pdns.AddToScheme(scheme)
+	_ = pdnsv1.AddToScheme(scheme)
 
 	err := ctrl.NewControllerManagedBy(manager).
-		For(&pdns.Zone{}).
+		For(&pdnsv1.Zone{}).
 		Complete(r)
 	if err != nil {
 		return err

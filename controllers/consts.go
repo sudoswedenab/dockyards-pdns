@@ -4,9 +4,12 @@ import (
 	dyconfig "github.com/sudoswedenab/dockyards-backend/api/config"
 )
 
-const zoneTTL = 300
-
 const KeyManagementDomain dyconfig.Key = "managementDomain"
+
+const (
+	workloadTargetNamespace = "external-dns"
+	secretPDNSAPIKey        = "PDNS_API_KEY"
+)
 
 const (
 	KeyPDNSName      dyconfig.Key = "pdnsName"
@@ -14,6 +17,7 @@ const (
 )
 
 const (
+	zoneTTL            = 300
 	soaRefreshInterval = 10800
 	soaRetryInterval   = 3600
 	soaExpireTime      = 604800
