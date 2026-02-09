@@ -4,36 +4,34 @@ This repository supplies a small Kubernetes controller that keeps Dockyards clus
 
 ## Component diagram
 ```mermaid
-flowchart LR
-    DockyardsPDNS["dockyards-pdns"]
-    DockyardsBackend["dockyards-backend"]
-    User
-    ExternalDNS["external-dns"]
-    DockyardsCluster["dockyards.io/v1alpha3 Cluster"]
-    WorkloadFlow@{ shape: cloud, label: "workload flow" }
-    Zone["dns.cav.enablers.ob/v1alpha2 Zone"]
-    SOARecord["dns.cav.enables.ob/v1alpha2 SOA RRSet"]
-    ARecord["dns.cav.enables.ob/v1alpha2 A RRSet"]
-    PDNSOperator["powerdns-operator"]
-    PDNS["powerdns"]
-    Ingress@{ shape: processes, label : "networking.k8s.io/v1 Ingress"}
+flowchart TB
+    User@{shape: rect, label: "User"}
+    DockyardsBackend@{shape: rect, label: "dockyards-backend"}
+    DockyardsPDNS@{shape: rect, label: "dockyards-pdns"}
+    ExternalDNS@{shape: rect, label: "external-dns"}
+    PDNSOperator@{shape: rect, label: "powerdns-operator"}
+    PDNS@{shape: rect, label: "powerdns"}
+    WorkloadFlow@{shape: cloud, label: "workload flow"}
+    DockyardsCluster@{shape: doc, label: "dockyards.io/v1alpha3 Cluster"}
+    Zone@{shape: doc, label: "dns.cav.enablers.ob/v1alpha2 Zone"}
+    SOARecord@{shape: doc, label: "dns.cav.enables.ob/v1alpha2 SOA RRSet"}
+    ARecord@{shape: doc, label: "dns.cav.enables.ob/v1alpha2 A RRSet"}
+    Ingress@{shape: doc, label: "networking.k8s.io/v1 Ingress"}
 
     User -->|creates through API| DockyardsBackend
     DockyardsBackend -->|creates| DockyardsCluster
     DockyardsCluster -->|is reconciled by| DockyardsPDNS
-    DockyardsPDNS -.->|triggers|WorkloadFlow
+    DockyardsPDNS -.->|triggers| WorkloadFlow
     WorkloadFlow -.->|creates and configures| ExternalDNS
-    DockyardsPDNS -->|creates|Zone
-    DockyardsPDNS -->|creates|SOARecord
-    DockyardsPDNS -->|creates|ARecord
-    Zone -->|is reconciled by|PDNSOperator
-    SOARecord -->|is reconciled by|PDNSOperator
-    ARecord -->|is reconciled by|PDNSOperator
+    DockyardsPDNS -->|creates| Zone
+    DockyardsPDNS -->|creates| SOARecord
+    DockyardsPDNS -->|creates| ARecord
+    Zone -->|is reconciled by| PDNSOperator
+    SOARecord -->|is reconciled by| PDNSOperator
+    ARecord -->|is reconciled by| PDNSOperator
     PDNSOperator -->|creates resources in| PDNS
     Ingress -->|is reconciled by| ExternalDNS
     ExternalDNS -->|registers resources in| PDNS
-
-
 
     subgraph Management Cluster
         subgraph dockyards-system
@@ -52,10 +50,10 @@ flowchart LR
                 Ingress
             end
         end
-    end
-    subgraph powerdns
-        PDNSOperator
-        PDNS
+        subgraph powerdns
+            PDNSOperator
+            PDNS
+        end
     end
 ```
 
