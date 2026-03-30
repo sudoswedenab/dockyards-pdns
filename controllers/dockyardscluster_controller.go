@@ -16,7 +16,7 @@ package controllers
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	pdnsv1 "github.com/powerdns-operator/powerdns-operator/api/v1alpha2"
 	"github.com/sudoswedenab/dockyards-backend/api/apiutil"
@@ -72,9 +72,12 @@ func (r *DockyardsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 func (r *DockyardsClusterReconciler) reconcileDNSZone(ctx context.Context, cluster *dockyardsv1.Cluster) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
 
-	managementDomain := r.GetValueOrDefault(KeyManagementDomain, "")
+	managementDomain, found := r.GetValueForKey(KeyManagementDomain)
+	if !found {
+		return ctrl.Result{}, fmt.Errorf("config key `%s` not found", KeyManagementDomain)
+	}
 	if managementDomain == "" {
-		return ctrl.Result{}, errors.New("no value for config key " + string(KeyManagementDomain))
+		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", KeyManagementDomain)
 	}
 
 	zoneName := string(cluster.GetUID()) + "." + managementDomain

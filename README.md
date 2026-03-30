@@ -82,7 +82,7 @@ The `powerdns-operator` runs in the PowerDNS namespace and reconciles the Zone/`
 
 - **`DockyardsClusterReconciler`** (controllers/dockyardscluster_controller.go) watches `dockyards.io` clusters. When a cluster is owned by an organization and not being deleted it ensures a PowerDNS `Zone` exists with the right labels, ownership, and nameserver records.
 - **`ZoneReconciler`** (controllers/zone_controller.go) watches the PowerDNS `Zone` resource. Once a zone enters a succeeded state it create/patches the SOA/NS RRsets, discovers PowerDNS API and DNS endpoints, and configures a Dockyards `Workload` that runs ExternalDNS pointing at PowerDNS.
-- **`Configuration`** is driven by the Dockyards config reader; keys such as `managementDomain`, `pdnsName`, `pdnsNamespace`, and `publicNamespace` tell the controller how to wire everything together (the `pdnsName` base also names the PowerDNS secret that holds `PDNS_API_KEY`).
+- **`Configuration`** is driven by the Dockyards config reader; the operator requires config keys to exist (not missing) and be non-empty. In particular: `dockyards-pdns.managementDomain`, `dockyards-pdns.pdnsName`, `dockyards-pdns.pdnsNamespace`, plus the Dockyards public namespace key (used for the ExternalDNS `WorkloadTemplate`). The `pdnsName` value also names the PowerDNS secret that must contain `PDNS_API_KEY`.
 
 ## Requirements
 
@@ -111,6 +111,7 @@ go test ./...
 ## Troubleshooting
 
 - Check the `dockyards-pdns` and helper microservice logs to understand why zone reconciliation or the ExternalDNS workload rollout might have stalled.
+- If you see errors like `config key '...' not found` or `no value for config key '...'`, verify the required Dockyards config keys exist and are set to non-empty values.
 - Validate that the PowerDNS services expose LoadBalancer DNS and ClusterIP addresses (`<pdnsName>-dns` and `<pdnsName>-api`).
 - Confirm the `Workload` custom resource template `external-dns` exists in the public namespace referenced by the config and matches the ExternalDNS settings shown in the diagram.
 

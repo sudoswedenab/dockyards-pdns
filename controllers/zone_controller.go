@@ -199,12 +199,18 @@ func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdnsv1.Zone,
 // reconcileExternalDNS configures a Dockyards Workload that runs ExternalDNS against PowerDNS.
 func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdnsv1.Zone, cluster *dockyardsv1.Cluster, internalIPs []string) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
-	pdnsName := r.GetValueOrDefault(KeyPDNSName, "")
+	pdnsName, found := r.GetValueForKey(KeyPDNSName)
+	if !found {
+		return ctrl.Result{}, fmt.Errorf("config key `%s` not found", KeyPDNSName)
+	}
 	if pdnsName == "" {
 		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", KeyPDNSName)
 	}
 
-	pdnsNamespace := r.GetValueOrDefault(KeyPDNSNamespace, "")
+	pdnsNamespace, found := r.GetValueForKey(KeyPDNSNamespace)
+	if !found {
+		return ctrl.Result{}, fmt.Errorf("config key `%s` not found", KeyPDNSNamespace)
+	}
 	if pdnsNamespace == "" {
 		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", KeyPDNSNamespace)
 	}
@@ -220,7 +226,10 @@ func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdnsv1.
 		return ctrl.Result{}, err
 	}
 
-	publicNamespace := r.GetValueOrDefault(dyconfig.KeyPublicNamespace, "")
+	publicNamespace, found := r.GetValueForKey(dyconfig.KeyPublicNamespace)
+	if !found {
+		return ctrl.Result{}, fmt.Errorf("config key `%s` not found", dyconfig.KeyPublicNamespace)
+	}
 	if publicNamespace == "" {
 		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", dyconfig.KeyPublicNamespace)
 	}
@@ -299,12 +308,18 @@ func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdnsv1.
 
 // getPDNSIPs fetches the DNS and API service addresses exported by PowerDNS components.
 func (r *ZoneReconciler) getPDNSIPs(ctx context.Context) (*PDNSIPs, error) {
-	pdnsName := r.GetValueOrDefault(KeyPDNSName, "")
+	pdnsName, found := r.GetValueForKey(KeyPDNSName)
+	if !found {
+		return nil, fmt.Errorf("config key `%s` not found", KeyPDNSName)
+	}
 	if pdnsName == "" {
 		return nil, fmt.Errorf("no value for config key `%s`", KeyPDNSName)
 	}
 
-	pdnsNamespace := r.GetValueOrDefault(KeyPDNSNamespace, "")
+	pdnsNamespace, found := r.GetValueForKey(KeyPDNSNamespace)
+	if !found {
+		return nil, fmt.Errorf("config key `%s` not found", KeyPDNSNamespace)
+	}
 	if pdnsNamespace == "" {
 		return nil, fmt.Errorf("no value for config key `%s`", KeyPDNSNamespace)
 	}
