@@ -24,8 +24,6 @@ import (
 	"github.com/spf13/pflag"
 	dyconfig "github.com/sudoswedenab/dockyards-backend/api/config"
 	controllers "github.com/sudoswedenab/dockyards-pdns/controllers"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -62,10 +60,6 @@ func main() {
 
 		os.Exit(1)
 	}
-
-	scheme := runtime.NewScheme()
-
-	_ = corev1.AddToScheme(scheme)
 
 	configManagerOptions := []dyconfig.ConfigManagerOption{
 		dyconfig.WithLogger(logger),

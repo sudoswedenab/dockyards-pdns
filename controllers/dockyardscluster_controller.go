@@ -23,6 +23,7 @@ import (
 	dyconfig "github.com/sudoswedenab/dockyards-backend/api/config"
 	dockyardsv1 "github.com/sudoswedenab/dockyards-backend/api/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -46,8 +47,8 @@ func (r *DockyardsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	var cluster dockyardsv1.Cluster
 	err := r.Get(ctx, req.NamespacedName, &cluster)
-	if client.IgnoreNotFound(err) != nil {
-		return ctrl.Result{}, err
+	if err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if !cluster.DeletionTimestamp.IsZero() {
@@ -95,10 +96,11 @@ func (r *DockyardsClusterReconciler) reconcileDNSZone(ctx context.Context, clust
 		}
 		zone.OwnerReferences = []metav1.OwnerReference{
 			{
-				APIVersion: dockyardsv1.GroupVersion.String(),
-				Kind:       dockyardsv1.ClusterKind,
-				Name:       cluster.Name,
-				UID:        cluster.UID,
+				APIVersion:         dockyardsv1.GroupVersion.String(),
+				Kind:               dockyardsv1.ClusterKind,
+				Name:               cluster.Name,
+				UID:                cluster.UID,
+				BlockOwnerDeletion: ptr.To(true),
 			},
 		}
 
