@@ -66,11 +66,11 @@ func (r *DockyardsClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, nil
 	}
 
-	return r.reconcileDNSZone(ctx, &cluster)
+	return r.reconcileDNSZone(ctx, &cluster, ownerOrganization)
 }
 
 // reconcileDNSZone creates or patches the PowerDNS zone tied to the provided cluster.
-func (r *DockyardsClusterReconciler) reconcileDNSZone(ctx context.Context, cluster *dockyardsv1.Cluster) (ctrl.Result, error) {
+func (r *DockyardsClusterReconciler) reconcileDNSZone(ctx context.Context, cluster *dockyardsv1.Cluster, ownerOrganization *dockyardsv1.Organization) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
 
 	managementDomain, found := r.GetValueForKey(KeyManagementDomain)
@@ -81,7 +81,11 @@ func (r *DockyardsClusterReconciler) reconcileDNSZone(ctx context.Context, clust
 		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", KeyManagementDomain)
 	}
 
-	zoneName := string(cluster.GetUID()) + "." + managementDomain
+	if ownerOrganization == nil {
+		return ctrl.Result{}, fmt.Errorf("cluster %s has no owner organization", cluster.Name)
+	}
+
+	zoneName := ownerOrganization.Name + "-" + cluster.GetName() + "." + managementDomain
 
 	zone := pdnsv1.Zone{
 		ObjectMeta: metav1.ObjectMeta{
@@ -100,6 +104,7 @@ func (r *DockyardsClusterReconciler) reconcileDNSZone(ctx context.Context, clust
 				Kind:               dockyardsv1.ClusterKind,
 				Name:               cluster.Name,
 				UID:                cluster.UID,
+				Controller:         ptr.To(true),
 				BlockOwnerDeletion: ptr.To(true),
 			},
 		}

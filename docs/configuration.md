@@ -9,4 +9,4 @@ This operator relies on the Dockyards config store (`DockyardsConfigReader`) to 
 | `pdnsNamespace` | Namespace where the PowerDNS services live. | `pdns` |
 | `publicNamespace` | Namespace that exports the `external-dns` template used to render workloads. | `dockyards-public` |
 
-`DockyardsClusterReconciler` appends the cluster UID to `managementDomain` for zone naming, and `ZoneReconciler` uses the other keys to find secrets, services, and workloads.
+`DockyardsClusterReconciler` combines the owning organization name and cluster name with `managementDomain` for zone naming, and `ZoneReconciler` uses the other keys to find secrets, services, and workloads.

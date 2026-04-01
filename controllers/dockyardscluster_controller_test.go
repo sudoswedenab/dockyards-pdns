@@ -141,7 +141,7 @@ func TestClusterReconciler(t *testing.T) {
 
 	t.Run("test cluster reconciliation", func(t *testing.T) {
 		r := DockyardsClusterReconciler{c, dockyardsConfigManager}
-		_, err = r.reconcileDNSZone(ctx, &cluster)
+		_, err = r.reconcileDNSZone(ctx, &cluster, &organization)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -151,7 +151,8 @@ func TestClusterReconciler(t *testing.T) {
 			t.Fatalf("unable to get key %s from dockyards config", KeyManagementDomain)
 		}
 
-		zoneName := string(cluster.GetUID()) + "." + managementDomain
+		zoneName := organization.Name + "-" + cluster.GetName() + "." + managementDomain
+
 		zone := pdnsv1.Zone{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      zoneName,
@@ -174,6 +175,7 @@ func TestClusterReconciler(t *testing.T) {
 				Kind:               dockyardsv1.ClusterKind,
 				Name:               cluster.Name,
 				UID:                cluster.UID,
+				Controller:         ptr.To(true),
 				BlockOwnerDeletion: ptr.To(true),
 			},
 		}

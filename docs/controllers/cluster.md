@@ -3,7 +3,7 @@
 `controllers/DockyardsClusterReconciler` (see `controllers/dockyardscluster_controller.go`) monitors `dockyards.io/v1alpha3` clusters. Its responsibilities:
 
 - Skip clusters with no owning organization or those that are marked for deletion.
-- For each active cluster, construct a PowerDNS `Zone` whose name combines the cluster UID with the configured `managementDomain`.
+- For each active cluster, construct a PowerDNS `Zone` whose name combines the organization name, cluster name, and configured `managementDomain`.
 - Label and owner-reference the `Zone` so changes propagate back to the owning cluster.
 - Provide the `ns1.<zone>` nameserver that PowerDNS relies on.
 
