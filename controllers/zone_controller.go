@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -41,9 +42,11 @@ type ZoneReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=dockyards.io,resources=clusters/status,verbs=patch
+// +kubebuilder:rbac:groups=dockyards.io,resources=clusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=dockyards.io,resources=workloads,verbs=create;patch;get;list;watch
 // +kubebuilder:rbac:groups=core,resources=configmaps;secrets;services,verbs=get;list;watch
 // +kubebuilder:rbac:groups=dns.cav.enablers.ob,resources=rrsets,verbs=create;patch;get;list;watch
+// +kubebuilder:rbac:groups=dns.cav.enablers.ob,resources=zones/finalizers,verbs=update
 
 // Reconcile synchronizes RRsets and external DNS workloads once PowerDNS zones succeed.
 func (r *ZoneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -127,12 +130,15 @@ func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdnsv1.Zone,
 	}
 
 	operationResult, err := controllerutil.CreateOrPatch(ctx, r.Client, &soaset, func() error {
+		soaset.Labels = zone.Labels
 		soaset.OwnerReferences = []metav1.OwnerReference{
 			{
-				APIVersion: pdnsv1.GroupVersion.String(),
-				Kind:       "Zone", // PDNS library does not offer ZoneKind
-				Name:       zone.Name,
-				UID:        zone.UID,
+				APIVersion:         pdnsv1.GroupVersion.String(),
+				Kind:               "Zone", // PDNS library does not offer ZoneKind
+				Name:               zone.Name,
+				UID:                zone.UID,
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
 			},
 		}
 		soaset.Spec = pdnsv1.RRsetSpec{
@@ -164,12 +170,15 @@ func (r *ZoneReconciler) reconcileRRsets(ctx context.Context, zone *pdnsv1.Zone,
 	}
 
 	operationResult, err = controllerutil.CreateOrPatch(ctx, r.Client, &rrset, func() error {
+		rrset.Labels = zone.Labels
 		rrset.OwnerReferences = []metav1.OwnerReference{
 			{
-				APIVersion: pdnsv1.GroupVersion.String(),
-				Kind:       "Zone", // PDNS library does not offer ZoneKind
-				Name:       zone.Name,
-				UID:        zone.UID,
+				APIVersion:         pdnsv1.GroupVersion.String(),
+				Kind:               "Zone", // PDNS library does not offer ZoneKind
+				Name:               zone.Name,
+				UID:                zone.UID,
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
 			},
 		}
 		rrset.Spec = pdnsv1.RRsetSpec{
@@ -252,10 +261,12 @@ func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdnsv1.
 
 		workload.OwnerReferences = []metav1.OwnerReference{
 			{
-				APIVersion: dockyardsv1.GroupVersion.String(),
-				Kind:       dockyardsv1.ClusterKind,
-				Name:       cluster.Name,
-				UID:        cluster.UID,
+				APIVersion:         dockyardsv1.GroupVersion.String(),
+				Kind:               dockyardsv1.ClusterKind,
+				Name:               cluster.Name,
+				UID:                cluster.UID,
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
 			},
 		}
 

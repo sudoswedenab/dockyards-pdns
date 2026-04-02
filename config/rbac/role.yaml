@@ -48,6 +48,12 @@ rules:
   - patch
   - watch
 - apiGroups:
+  - dns.cav.enablers.ob
+  resources:
+  - zones/finalizers
+  verbs:
+  - update
+- apiGroups:
   - dockyards.io
   resources:
   - clusters
@@ -56,6 +62,12 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - dockyards.io
+  resources:
+  - clusters/finalizers
+  verbs:
+  - update
 - apiGroups:
   - dockyards.io
   resources:

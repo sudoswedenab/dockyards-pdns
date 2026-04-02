@@ -215,15 +215,20 @@ func TestClusterReconciler(t *testing.T) {
 
 		expectedSOAOwner := []metav1.OwnerReference{
 			{
-				APIVersion: pdnsv1.GroupVersion.String(),
-				Kind:       "Zone",
-				Name:       zone.Name,
-				UID:        zone.UID,
+				APIVersion:         pdnsv1.GroupVersion.String(),
+				Kind:               "Zone",
+				Name:               zone.Name,
+				UID:                zone.UID,
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
 			},
 		}
 
 		if !cmp.Equal(expectedSOAOwner, rrsetSOA.ObjectMeta.OwnerReferences) {
 			t.Error(cmp.Diff(expectedSOAOwner, rrsetSOA.ObjectMeta.OwnerReferences))
+		}
+		if !cmp.Equal(zone.Labels, rrsetSOA.Labels) {
+			t.Error(cmp.Diff(zone.Labels, rrsetSOA.Labels))
 		}
 
 		nsString := "ns1." + zone.Name + "."
@@ -271,15 +276,20 @@ func TestClusterReconciler(t *testing.T) {
 
 		expectedAOwner := []metav1.OwnerReference{
 			{
-				APIVersion: pdnsv1.GroupVersion.String(),
-				Kind:       "Zone",
-				Name:       zone.Name,
-				UID:        zone.UID,
+				APIVersion:         pdnsv1.GroupVersion.String(),
+				Kind:               "Zone",
+				Name:               zone.Name,
+				UID:                zone.UID,
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
 			},
 		}
 
 		if !cmp.Equal(expectedAOwner, rrsetA.ObjectMeta.OwnerReferences) {
 			t.Error(cmp.Diff(expectedAOwner, rrsetA.ObjectMeta.OwnerReferences))
+		}
+		if !cmp.Equal(zone.Labels, rrsetA.Labels) {
+			t.Error(cmp.Diff(zone.Labels, rrsetA.Labels))
 		}
 
 		expectedASpec := pdnsv1.RRsetSpec{
@@ -353,10 +363,12 @@ func TestClusterReconciler(t *testing.T) {
 
 		expectedWorkloadOwner := []metav1.OwnerReference{
 			{
-				APIVersion: dockyardsv1.GroupVersion.String(),
-				Kind:       dockyardsv1.ClusterKind,
-				Name:       cluster.Name,
-				UID:        cluster.UID,
+				APIVersion:         dockyardsv1.GroupVersion.String(),
+				Kind:               dockyardsv1.ClusterKind,
+				Name:               cluster.Name,
+				UID:                cluster.UID,
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
 			},
 		}
 

@@ -30,6 +30,7 @@ import (
 )
 
 // +kubebuilder:rbac:groups=dockyards.io,resources=clusters/status,verbs=patch
+// +kubebuilder:rbac:groups=dockyards.io,resources=clusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=dockyards.io,resources=clusters,verbs=get;list;watch
 // +kubebuilder:rbac:groups=dockyards.io,resources=organizations,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
