@@ -101,6 +101,7 @@ func TestClusterReconciler(t *testing.T) {
 		string(KeyManagementDomain):         "test.com",
 		string(KeyPDNSName):                 "test-pdns",
 		string(KeyPDNSNamespace):            "test-ns",
+		string(KeySources):                  "ingress,service",
 		string(dyconfig.KeyPublicNamespace): "public-ns",
 	})
 
@@ -385,6 +386,7 @@ func TestClusterReconciler(t *testing.T) {
 			"provider": "pdns",
 			"sources": []string{
 				"ingress",
+				"service",
 			},
 			"credentials": map[string]string{
 				"pdnsApiKey": string(secret.Data[secretPDNSAPIKey]),

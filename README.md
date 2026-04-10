@@ -73,7 +73,7 @@ The diagram shows how the operator bridges Dockyards control-plane resources, th
 Each `DockyardsCluster` owns a `dns.cav.enablers.ob/v1alpha2 Zone` and the associated `SOA`/`A` RRsets. The controller keeps those resources labeled and annotated so the PowerDNS operator can reconcile them into real DNS data. Once the zone is marked successful, the controller creates a `Workload` for ExternalDNS, pointing it at the PowerDNS API and DNS endpoints tied to that zone.
 
 ### Workload cluster and networking
-ExternalDNS runs inside the workload cluster and watches Kubernetes `Ingress` resources (`networking.k8s.io/v1`). When an ingress moves into the desired state, ExternalDNS writes the corresponding records back into PowerDNS so the public DNS matches the cluster’s edge configuration.
+ExternalDNS runs inside the workload cluster and watches the configured sources (via `dockyards-pdns.sources`). When a resource moves into the desired state, ExternalDNS writes the corresponding records back into PowerDNS so the public DNS matches the cluster’s edge configuration.
 
 ### PowerDNS integration
 The `powerdns-operator` runs in the PowerDNS namespace and reconciles the Zone/`RRSet` custom resources created by `dockyards-pdns`. It exposes two services, typically named `<pdnsName>-api` and `<pdnsName>-dns`, that the `ZoneReconciler` uses for administration and record publication.
@@ -83,6 +83,7 @@ The `powerdns-operator` runs in the PowerDNS namespace and reconciles the Zone/`
 - **`DockyardsClusterReconciler`** (controllers/dockyardscluster_controller.go) watches `dockyards.io` clusters. When a cluster is owned by an organization and not being deleted it ensures a PowerDNS `Zone` exists with the right labels, ownership, and nameserver records.
 - **`ZoneReconciler`** (controllers/zone_controller.go) watches the PowerDNS `Zone` resource. Once a zone enters a succeeded state it create/patches the SOA/NS RRsets, discovers PowerDNS API and DNS endpoints, and configures a Dockyards `Workload` that runs ExternalDNS pointing at PowerDNS.
 - **`Configuration`** is driven by the Dockyards config reader; the operator requires config keys to exist (not missing) and be non-empty. In particular: `dockyards-pdns.managementDomain`, `dockyards-pdns.pdnsName`, `dockyards-pdns.pdnsNamespace`, plus the Dockyards public namespace key (used for the ExternalDNS `WorkloadTemplate`). The `pdnsName` value also names the PowerDNS secret that must contain `PDNS_API_KEY`.
+- **`Configuration`** also requires `dockyards-pdns.sources` (comma-separated list) to control which ExternalDNS sources are enabled (for example `ingress,service`).
 
 ## Requirements
 

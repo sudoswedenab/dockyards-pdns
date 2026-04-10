@@ -243,6 +243,22 @@ func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdnsv1.
 		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", dyconfig.KeyPublicNamespace)
 	}
 
+	sourcesValue, found := r.GetValueForKey(KeySources)
+	if !found {
+		return ctrl.Result{}, fmt.Errorf("config key `%s` not found", KeySources)
+	}
+	if sourcesValue == "" {
+		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", KeySources)
+	}
+
+	sources, err := parseExternalDNSSources(sourcesValue)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("invalid value for config key `%s`: %w", KeySources, err)
+	}
+	if len(sources) == 0 {
+		return ctrl.Result{}, fmt.Errorf("no value for config key `%s`", KeySources)
+	}
+
 	workload := dockyardsv1.Workload{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Name + "-external-dns",
@@ -287,9 +303,7 @@ func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdnsv1.
 
 		raw, err := json.Marshal(map[string]any{
 			"provider": "pdns",
-			"sources": []string{
-				"ingress",
-			},
+			"sources":  sources,
 			"credentials": map[string]string{
 				"pdnsApiKey": string(apiKey),
 			},
@@ -315,6 +329,27 @@ func (r *ZoneReconciler) reconcileExternalDNS(ctx context.Context, zone *pdnsv1.
 	logger.Info("Reconciled Workload", "cluster", cluster.Name, "workload", workload.Name, "operationResult", operationResult)
 
 	return ctrl.Result{}, nil
+}
+
+func parseExternalDNSSources(value string) ([]string, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil, fmt.Errorf("empty")
+	}
+
+	// Expected format: comma-separated list (e.g. "ingress,service").
+	rawParts := strings.Split(trimmed, ",")
+	out := make([]string, 0, len(rawParts))
+	for _, part := range rawParts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("empty")
+	}
+	return out, nil
 }
 
 // getPDNSIPs fetches the DNS and API service addresses exported by PowerDNS components.

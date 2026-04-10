@@ -28,6 +28,7 @@ const (
 const (
 	KeyPDNSName      dyconfig.Key = "dockyards-pdns.pdnsName"
 	KeyPDNSNamespace dyconfig.Key = "dockyards-pdns.pdnsNamespace"
+	KeySources       dyconfig.Key = "dockyards-pdns.sources"
 )
 
 const (
